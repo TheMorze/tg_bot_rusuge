@@ -4,20 +4,25 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from config_data.config import Config, load_config
-from handlers import user_handlers, keyboard_handlers, \
+from handlers import user_handlers, stresses_handlers, \
                      other_handlers
-from config_data.menu import set_main_menu
                      
+from database.service import Database
+from config_data.menu import set_main_menu
+from aiogram.fsm.storage.memory import MemoryStorage
+
 # Функция конфигурации и запуска бота
 async def main() -> None:
     
     config: Config = load_config()
     
     bot = Bot(token=config.tg_bot.token, parse_mode='HTML')
-    dp = Dispatcher()
+    storage = MemoryStorage()
+    dp = Dispatcher(storage=storage)
+    Database.create_users_table()
     
     dp.include_router(user_handlers.router)
-    dp.include_router(keyboard_handlers.router)
+    dp.include_router(stresses_handlers.router)
     dp.include_router(other_handlers.router)
     
     # Запускаем функцию настройки меню с командами
