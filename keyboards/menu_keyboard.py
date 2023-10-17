@@ -6,9 +6,9 @@ kb_builder = ReplyKeyboardBuilder()
 
 # Кнопки для клавиатуры
 buttons = [
-    KeyboardButton(text='Практиковаться'),
-    KeyboardButton(text='Статистика'),
-    KeyboardButton(text='Список лидеров')
+    KeyboardButton(text='🥷 Практиковаться'),
+    KeyboardButton(text='📊 Статистика'),
+    KeyboardButton(text='🏆 Список лидеров')
 ]
 
 kb_builder.add(buttons[0])
