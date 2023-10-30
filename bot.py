@@ -7,7 +7,7 @@ from config_data.config import Config, load_config
 from handlers import user_handlers, stresses_handlers, \
                      other_handlers
                      
-from database.service import Database
+from database.users import Users
 from config_data.menu import set_main_menu
 from aiogram.fsm.storage.redis import RedisStorage, Redis
 
@@ -19,7 +19,7 @@ async def main() -> None:
     bot = Bot(token=config.tg_bot.token, parse_mode='HTML')
     redis = Redis(host='localhost')
     dp = Dispatcher(redis=redis)
-    Database.create_users_table()
+    Users.create_users_table()
     
     dp.include_router(user_handlers.router)
     dp.include_router(stresses_handlers.router)

@@ -7,7 +7,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.fsm.state import default_state
 from aiogram.fsm.context import FSMContext
 
-from database.service import Database
+from database.users import Users
 from keyboards.create_reply_kb import create_reply_keyboard
 from keyboards.menu_keyboard import menu_keyboard
 from FSM.state import FSMStresses
@@ -18,7 +18,7 @@ router = Router()
 
 @router.message(CommandStart(), StateFilter(default_state))
 async def process_start_command(message: Message):
-    Database.set_user(user_id=message.from_user.id, user_name=message.from_user.username)
+    Users.set_user(user_id=message.from_user.id, user_name=message.from_user.username)
     await message.answer(
         text=LEXICON_RU['/start'],
         reply_markup=menu_keyboard
@@ -52,9 +52,9 @@ async def process_help_command(message: Message):
 async def process_stats_command(message: Message):
     user_id = message.from_user.id
     
-    score = Database.get_user_score(user_id=user_id)
-    correct = Database.get_user_correct(user_id=user_id)
-    not_correct = Database.get_user_not_correct(user_id=user_id)
+    score = Users.get_user_score(user_id=user_id)
+    correct = Users.get_user_correct(user_id=user_id)
+    not_correct = Users.get_user_not_correct(user_id=user_id)
     
     await message.reply(text=LEXICON_RU['/stats'].format(score=score, correct=correct, not_correct=not_correct),
                         reply_markup=menu_keyboard)

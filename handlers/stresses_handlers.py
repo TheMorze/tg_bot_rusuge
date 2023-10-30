@@ -5,11 +5,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
 
 from lexicon.lexicon import LEXICON_RU
-from lexicon.stresses import STRESSES
 from FSM.state import FSMStresses
-from database.service import Database
+from database.users import Users
+from database.stresses import Stresses
 
-from extra_funcs.stresses_processing import choose_random_stress, process_correct, \
+from extra_funcs.stresses_processing import process_correct, \
                                             process_not_correct
 from keyboards.create_reply_kb import create_reply_keyboard
 from keyboards.menu_keyboard import menu_keyboard
@@ -20,7 +20,7 @@ router = Router()
 # если пользователь в дефолтном состоянии
 @router.message(F.text == '🎯 Ударения', StateFilter(FSMStresses.in_choosing))
 async def start_practice_stresses(message: Message, state: FSMContext):
-    word, options, correct = choose_random_stress()
+    word, options, correct = Stresses.get_random_word()
     keyboard = create_reply_keyboard(width=5, resize_keyboard=True, args=options)
 
     await state.update_data(correct=correct, options=options)
@@ -45,7 +45,7 @@ async def process_stress_tasks(message: Message, state: FSMContext):
             await message.answer(text=LEXICON_RU['not_correct'])
 
         # Отправляем пользователю новый таск
-        word, options, correct = choose_random_stress()
+        word, options, correct = Stresses.get_random_word()
         keyboard = create_reply_keyboard(width=5, resize_keyboard=True, args=options)
         
         await state.update_data(correct=correct, options=options)
@@ -57,7 +57,7 @@ async def process_stress_tasks(message: Message, state: FSMContext):
     else:
         await message.answer(text=LEXICON_RU['not_stated_practicing'])
     
-@router.message(Command(commands='cancel'), StateFilter(FSMStresses.in_practicing))
+@router.message(Command(commands='cancel'), ~StateFilter(default_state))
 async def process_cancel_practicing(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(text=LEXICON_RU['bye'], reply_markup=menu_keyboard)
