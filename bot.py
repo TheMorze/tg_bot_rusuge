@@ -9,7 +9,7 @@ from handlers import user_handlers, stresses_handlers, \
                      
 from database.service import Database
 from config_data.menu import set_main_menu
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.redis import RedisStorage, Redis
 
 # Функция конфигурации и запуска бота
 async def main() -> None:
@@ -17,8 +17,8 @@ async def main() -> None:
     config: Config = load_config()
     
     bot = Bot(token=config.tg_bot.token, parse_mode='HTML')
-    storage = MemoryStorage()
-    dp = Dispatcher(storage=storage)
+    redis = Redis(host='localhost')
+    dp = Dispatcher(redis=redis)
     Database.create_users_table()
     
     dp.include_router(user_handlers.router)
