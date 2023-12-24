@@ -1,5 +1,8 @@
 from aiogram.fsm.state import State, StatesGroup
 
-class FSMStresses(StatesGroup):
-    in_choosing = State()
-    in_practicing = State()
+class FSMPracticing(StatesGroup):
+    in_choosing_practice = State()
+    in_choosing_prototypes = State()
+    
+    stresses = State()
+    prototypes = State()

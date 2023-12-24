@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message, KeyboardButton, ReplyKeyboardMarkup, \
                                    ReplyKeyboardRemove
@@ -8,64 +8,100 @@ from aiogram.fsm.state import default_state
 from aiogram.fsm.context import FSMContext
 
 from database.users import Users
+from database.user_stats import UserStats
 from keyboards.create_reply_kb import create_reply_keyboard
-from keyboards.menu_keyboard import menu_keyboard
-from FSM.state import FSMStresses
+from keyboards.menu_keyboard import get_menu_keyboard
+from keyboards.inline_keyboards import get_settings_keyboard, get_statistics_keyboard, \
+                                       get_practice_list, get_solving_list
+                                    
+from FSM.state import FSMPracticing
 from lexicon.lexicon import LEXICON_RU
 
 # Инициализация роутера уровня модуля
 router = Router()
 
-@router.message(CommandStart(), StateFilter(default_state))
+@router.message(CommandStart(), \
+    ~StateFilter(FSMPracticing.stresses, FSMPracticing.prototypes))
 async def process_start_command(message: Message):
-    Users.set_user(user_id=message.from_user.id, user_name=message.from_user.username)
+    user_id = message.from_user.id
+    Users.set_user(user_id=user_id,
+                   user_name=message.from_user.username)
+    UserStats.set_user_stats(user_id=user_id)
+    
     await message.answer(
         text=LEXICON_RU['/start'],
-        reply_markup=menu_keyboard
+        reply_markup=get_menu_keyboard()
     )
     
-@router.message(Command(commands=['menu']), StateFilter(default_state))
-async def process_menu_command(message: Message):
+@router.message(Command(commands=['menu']), \
+    ~StateFilter(FSMPracticing.stresses, FSMPracticing.prototypes))
+async def process_menu_command(message: Message, state: FSMContext):
+    await state.clear()
     await message.answer(
             text=LEXICON_RU['/menu'],
-            reply_markup=menu_keyboard
+            reply_markup=get_menu_keyboard()
         )
     
-@router.message(F.text.lower() == '🥷 практиковаться', StateFilter(default_state))
+@router.message(F.text.lower() == '🥷 практиковаться', \
+    ~StateFilter(FSMPracticing.stresses, FSMPracticing.prototypes))
 async def process_practice_command(message: Message, state: FSMContext):
-    await state.set_state(FSMStresses.in_choosing)
+    await state.set_state(FSMPracticing.in_choosing_practice)
     
-    keyboard = create_reply_keyboard(width=3, resize_keyboard=True, args={'🎯 Ударения'})
     await message.answer(
-        text='Что будем практиковать в этот раз?',
-        reply_markup=keyboard
+        text='Выбери раздел из нижепредставленных:',
+        reply_markup=get_practice_list()
     )
     
-@router.message(Command('help'), StateFilter(default_state))
+@router.message(F.text.lower() == '💡 решать прототипы', \
+            ~StateFilter(FSMPracticing.stresses, FSMPracticing.prototypes))
+async def process_solving_command(message: Message, state: FSMContext):
+    await state.set_state(FSMPracticing.in_choosing_prototypes)
+    
+    await message.answer(
+        text='Выбери раздел из нижепредставленных:',
+        reply_markup=get_solving_list()
+    )
+    
+@router.message(Command('help'), ~StateFilter(FSMPracticing.stresses, FSMPracticing.prototypes))
 async def process_help_command(message: Message):
     await message.answer(
         text=LEXICON_RU['/help'],
-        reply_markup=menu_keyboard
+        reply_markup=get_menu_keyboard()
     )
     
-@router.message(F.text.lower().in_(['/stats', '📊 статистика']), StateFilter(default_state))
-async def process_stats_command(message: Message):
-    user_id = message.from_user.id
+@router.message(F.text.lower().in_(['/stats', '📊 статистика', 'статистика']), \
+                ~StateFilter(FSMPracticing.stresses, FSMPracticing.prototypes))
+async def process_stats_command(message: Message, state: FSMContext):
+    if await state.get_state() not in (FSMPracticing.stresses, FSMPracticing.prototypes):
+        await state.clear()
     
-    score = Users.get_user_score(user_id=user_id)
-    correct = Users.get_user_correct(user_id=user_id)
-    not_correct = Users.get_user_not_correct(user_id=user_id)
+    await message.reply(text='Выберите раздел:',
+                        reply_markup=get_statistics_keyboard())
     
-    await message.reply(text=LEXICON_RU['/stats'].format(score=score, correct=correct, not_correct=not_correct),
-                        reply_markup=menu_keyboard)
+@router.message(F.text.lower().in_(['/settings', '⚙️ настройки', 'настройки']), \
+                ~StateFilter(FSMPracticing.stresses, FSMPracticing.prototypes))
+async def process_settings_command(message: Message, state: FSMContext):
+    if await state.get_state() not in (FSMPracticing.stresses, FSMPracticing.prototypes):
+        await state.clear()
     
-@router.message(F.text.lower().in_(['/leaderboard', '🏆 список лидеров']), StateFilter(default_state))
-async def process_leaderboard_command(message: Message):
-    pass
+    await message.answer(text=LEXICON_RU['/settings'], 
+                         reply_markup=get_settings_keyboard())
 
+@router.message(Command('cancel'), StateFilter(FSMPracticing.in_choosing_practice, \
+                FSMPracticing.in_choosing_prototypes))
+async def process_cancel_choosing(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(text='Главное меню',
+                         reply_markup=get_menu_keyboard())
 
 @router.message(Command('cancel'), StateFilter(default_state))
 async def process_cancel_command(message: Message):
     await message.answer(
         text=LEXICON_RU['impossible_cancel']
+    )
+    
+@router.message(~F.data == 'stresses', StateFilter(FSMPracticing.in_choosing_practice))
+async def process_not_stated_choosing(message: Message):
+    await message.answer(
+        text=LEXICON_RU['not_stated_practicing']
     )
